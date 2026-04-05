@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<title>Szerenád Matchmaker</title>
+<style>
+body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
+h2 { color: #333; }
+label { display: block; margin-top: 10px; }
+button { margin-top: 15px; padding: 8px 15px; }
+#parok li { margin-bottom: 5px; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h2>Szerenád Kérdőív 🍻</h2>
+
+<label>Név:<br>
+<input type="text" id="nev"></label>
+
+<div id="kerdesek">
+  <label>1. Halogatni vagy túlleni?<br>
+    <select id="q1">
+      <option value="halogatni">Halogatni</option>
+      <option value="tulleni">Túlleni</option>
+    </select>
+  </label>
+
+  <label>2. Ezüst vagy arany?<br>
+    <select id="q2">
+      <option value="ezust">Ezüst</option>
+      <option value="arany">Arany</option>
+    </select>
+  </label>
+
+  <label>3. Iphone vagy Android?<br>
+    <select id="q3">
+      <option value="iphone">Iphone</option>
+      <option value="android">Android</option>
+    </select>
+  </label>
+
+  <label>4. Korán vagy későn kelni?<br>
+    <select id="q4">
+      <option value="koran">Korán</option>
+      <option value="keson">Későn</option>
+    </select>
+  </label>
+
+  <label>5. Introvertált vagy extrovertált?<br>
+    <select id="q5">
+      <option value="intro">Introvertált</option>
+      <option value="extro">Extrovertált</option>
+    </select>
+  </label>
+
+  <label>6. Hány shot után kell hazavinni?<br>
+    <select id="q6">
+      <option value="0-1">0–1</option>
+      <option value="2-3">2–3</option>
+      <option value="4+">4+</option>
+    </select>
+  </label>
+
+  <label>7. Inkább tervezel vagy improvizálsz?<br>
+    <select id="q7">
+      <option value="tervez">Tervez</option>
+      <option value="improv">Improvizál</option>
+    </select>
+  </label>
+
+  <label>8. Mi a kedvenc évszakod?<br>
+    <select id="q8">
+      <option value="tavasz">Tavasz</option>
+      <option value="nyar">Nyár</option>
+      <option value="osz">Ősz</option>
+      <option value="tel">Tél</option>
+    </select>
+  </label>
+
+  <label>9. Édes vagy sós?<br>
+    <select id="q9">
+      <option value="edes">Édes</option>
+      <option value="sos">Sós</option>
+    </select>
+  </label>
+
+  <label>10. Inkább maradsz sokáig vagy hamar lelépsz?<br>
+    <select id="q10">
+      <option value="marad">Marad sokáig</option>
+      <option value="lelep">Hamar lelép</option>
+    </select>
+  </label>
+
+  <label>11. Inkább mindig késel vagy mindig időben?<br>
+    <select id="q11">
+      <option value="kesel">Mindig késel</option>
+      <option value="idoben">Mindig időben</option>
+    </select>
+  </label>
+
+  <label>12. Inkább Magyar zene vagy külföldi?<br>
+    <select id="q12">
+      <option value="magyar">Magyar</option>
+      <option value="kulfoldi">Külföldi</option>
+    </select>
+  </label>
+
+  <label>13. Elegáns vagy laza/sportos?<br>
+    <select id="q13">
+      <option value="elegans">Elegáns</option>
+      <option value="laza">Laza/Sportos</option>
+    </select>
+  </label>
+
+  <label>14. Hányszor tört el bármit?<br>
+    <select id="q14">
+      <option value="0-1">0–1</option>
+      <option value="2-3">2–3</option>
+      <option value="4+">4+</option>
+    </select>
+  </label>
+
+  <label>15. Hány gyereket akarsz?<br>
+    <select id="q15">
+      <option value="0">0</option>
+      <option value="1-2">1–2</option>
+      <option value="3+">3+</option>
+    </select>
+  </label>
+
+</div>
+
+<button onclick="addPerson()">Hozzáadás</button>
+<button onclick="matchPeople()">Párosítás</button>
+
+<h3>Résztvevők:</h3>
+<ul id="lista"></ul>
+
+<h3>Párok:</h3>
+<ul id="parok"></ul>
+
+<script>
+let people = [];
+
+function addPerson() {
+  let nev = document.getElementById("nev").value.trim();
+  if (!nev) { alert("Adj meg nevet!"); return; }
+
+  let answers = [];
+  for (let i=1; i<=15; i++){
+    answers.push(document.getElementById("q"+i).value);
+  }
+
+  people.push({nev, answers});
+
+  let li = document.createElement("li");
+  li.textContent = nev;
+  document.getElementById("lista").appendChild(li);
+
+  document.getElementById("nev").value = "";
+}
+
+// Egyszerű similarity: minden egyezés +1 pont
+function similarity(a, b) {
+  let score = 0;
+  for (let i=0; i< a.answers.length; i++){
+    if (a.answers[i] === b.answers[i]) score++;
+  }
+  return score;
+}
+
+// Párosítás
+function matchPeople() {
+  let used = [];
+  let pairs = [];
+
+  for (let i=0; i<people.length; i++){
+    if (used.includes(i)) continue;
+
+    let bestMatch = -1;
+    let bestScore = -1;
+
+    for (let j=i+1; j<people.length; j++){
+      if (used.includes(j)) continue;
+      let score = similarity(people[i], people[j]);
+      if (score > bestScore){
+        bestScore = score;
+        bestMatch = j;
+      }
+    }
+
+    if (bestMatch !== -1){
+      used.push(i);
+      used.push(bestMatch);
+      pairs.push([people[i].nev, people[bestMatch].nev, bestScore]);
+    }
+  }
+
+  let parokLista = document.getElementById("parok");
+  parokLista.innerHTML = "";
+  pairs.forEach(p => {
+    let li = document.createElement("li");
+    li.textContent = `${p[0]} ❤️ ${p[1]} (Egyezés: ${p[2]} pont)`;
+    parokLista.appendChild(li);
+  });
+}
+</script>
+
+</body>
+</html>
