@@ -1,143 +1,311 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-<meta charset="UTF-8">
-<title>Szerenád Matchmaker</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Szerenád Matchmaker</title>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBRThDuC3vJyMhHluWcp39anmlgWcMJBy4",
-  authDomain: "szerenad-3e281.firebaseapp.com",
-  databaseURL: "https://szerenad-3e281-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "szerenad-3e281",
-  storageBucket: "szerenad-3e281.firebasestorage.app",
-  messagingSenderId: "746045136275",
-  appId: "1:746045136275:web:e1720a6619cd05bf671c66"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-const peopleRef = ref(db, "people");
-
-let people = [];
-
-window.addPerson = function() {
-  const name = document.getElementById("nev").value;
-  const answers = [];
-
-  for (let i = 1; i <= 15; i++) {
-    answers.push(document.getElementById("q"+i).value);
-  }
-
-  push(peopleRef, { name, answers });
-}
-
-onValue(peopleRef, (snapshot) => {
-  const data = snapshot.val();
-  people = [];
-
-  for (let key in data) {
-    people.push(data[key]);
-  }
-
-  renderList();
-});
-
-function renderList() {
-  const list = document.getElementById("lista");
-  list.innerHTML = "";
-
-  people.forEach(p => {
-    const li = document.createElement("li");
-    li.textContent = p.name;
-    list.appendChild(li);
-  });
-}
-
-window.matchPeople = function() {
-  let results = [];
-
-  for (let i = 0; i < people.length; i++) {
-    for (let j = i + 1; j < people.length; j++) {
-      let score = 0;
-
-      for (let k = 0; k < people[i].answers.length; k++) {
-        if (people[i].answers[k] === people[j].answers[k]) {
-          score++;
-        }
-      }
-
-      results.push({
-        pair: people[i].name + " - " + people[j].name,
-        score
-      });
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #2f2f35;
+      color: #f2f2f2;
+      margin: 0;
+      padding: 24px;
     }
-  }
 
-  results.sort((a, b) => b.score - a.score);
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #4a4a50;
+      padding: 28px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    }
 
-  const out = document.getElementById("parok");
-  out.innerHTML = "";
+    h1, h2, h3 {
+      margin-top: 0;
+    }
 
-  results.slice(0, 5).forEach(r => {
-    const li = document.createElement("li");
-    li.textContent = r.pair + " (" + r.score + " egyezés)";
-    out.appendChild(li);
-  });
-}
-</script>
+    label {
+      display: block;
+      margin-top: 14px;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
 
+    input, select, button {
+      font-size: 16px;
+    }
+
+    input[type="text"], select {
+      width: 100%;
+      max-width: 320px;
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+      margin-bottom: 6px;
+    }
+
+    .buttons {
+      margin-top: 20px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      opacity: 0.92;
+    }
+
+    ul {
+      padding-left: 20px;
+    }
+
+    .section {
+      margin-top: 28px;
+    }
+
+    .note {
+      font-size: 14px;
+      opacity: 0.85;
+      margin-top: 8px;
+    }
+  </style>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body>
+  <div class="container">
+    <h1>Szerenád Kérdőív 🍻</h1>
 
-<h2>Szerenád Kérdőív 🍻</h2>
+    <label for="nev">Név:</label>
+    <input type="text" id="nev" placeholder="Írd be a neved" />
 
-<label>Név:</label><br>
-<input type="text" id="nev"><br><br>
+    <div id="kerdesek"></div>
 
-<div id="kerdesek">
+    <div class="buttons">
+      <button onclick="addPerson()">Hozzáadás</button>
+      <button onclick="matchPeople()">Párosítás</button>
+      <button onclick="clearName()">Név törlése</button>
+    </div>
+
+    <div class="section">
+      <h3>Résztvevők:</h3>
+      <ul id="lista"></ul>
+    </div>
+
+    <div class="section">
+      <h3>Legjobb párok:</h3>
+      <ul id="parok"></ul>
+    </div>
+
+    <p class="note">Ha valaki hozzáadja magát, pár másodpercen belül mindenkinek meg kell jelennie.</p>
+  </div>
+
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBRThDuC3vJyMhHluWcp39anmlgWcMJBy4",
+      authDomain: "szerenad-3e281.firebaseapp.com",
+      databaseURL: "https://szerenad-3e281-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "szerenad-3e281",
+      storageBucket: "szerenad-3e281.firebasestorage.app",
+      messagingSenderId: "746045136275",
+      appId: "1:746045136275:web:e1720a6619cd05bf671c66"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const peopleRef = db.ref("people");
+
+    let people = [];
+
+    const questionTexts = [
+      "Halogatni vagy túlleni?",
+      "Ezüst vagy arany?",
+      "iPhone vagy Android?",
+      "Korán vagy későn kelni?",
+      "Introvertált vagy extrovertált vagy?",
+      "Hány shot után kell hazavinni?",
+      "Inkább tervezel vagy improvizálsz?",
+      "Mi a kedvenc évszakod?",
+      "Édes vagy sós?",
+      "Inkáb maradsz sokáig vagy hamar lelépsz?",
+      "Inkáb mindig késel vagy mindig időben?",
+      "Inkáb Magyar zene vagy külföldi?",
+      "Elegáns vagy laza/sportos?",
+      "Hányszor tört el bármit?",
+      "Hány gyereket akarsz?"
+    ];
+
     const questions = [
-      ["Halogatni", "Túl lenni"],
+      ["Halogatni", "Túlleni"],
       ["Ezüst", "Arany"],
       ["iPhone", "Android"],
       ["Korán", "Későn"],
       ["Introvertált", "Extrovertált"],
-      ["1-2", "3-5", "6+"],
+      ["0-1", "2-3", "4+"],
       ["Tervezel", "Improvizálsz"],
       ["Tél", "Tavasz", "Nyár", "Ősz"],
       ["Édes", "Sós"],
-      ["Maradok", "Lelépek"],
-      ["Késel", "Időben"],
+      ["Maradok sokáig", "Hamar lelépek"],
+      ["Mindig kések", "Mindig időben"],
       ["Magyar", "Külföldi"],
-      ["Elegáns", "Laza"],
-      ["0", "1-2", "3+"],
+      ["Elegáns", "Laza/sportos"],
+      ["0-1", "2-3", "4+"],
       ["0", "1-2", "3+"]
     ];
 
-    questions.forEach((q, i) => {
-      document.write(`<label>${i+1}. kérdés:</label><br>`);
-      document.write(`<select id="q${i+1}">`);
-      q.forEach(opt => {
-        document.write(`<option value="${opt}">${opt}</option>`);
+    function renderQuestions() {
+      const container = document.getElementById("kerdesek");
+      container.innerHTML = "";
+
+      questions.forEach((options, i) => {
+        const label = document.createElement("label");
+        label.setAttribute("for", "q" + (i + 1));
+        label.textContent = `${i + 1}. ${questionTexts[i]}`;
+
+        const select = document.createElement("select");
+        select.id = "q" + (i + 1);
+
+        options.forEach((opt) => {
+          const option = document.createElement("option");
+          option.value = opt;
+          option.textContent = opt;
+          select.appendChild(option);
+        });
+
+        container.appendChild(label);
+        container.appendChild(select);
       });
-      document.write(`</select><br><br>`);
+    }
+
+    function renderList() {
+      const list = document.getElementById("lista");
+      list.innerHTML = "";
+
+      people.forEach((p) => {
+        const li = document.createElement("li");
+        li.textContent = p.name;
+        list.appendChild(li);
+      });
+    }
+
+    window.clearName = function () {
+      document.getElementById("nev").value = "";
+    };
+
+    window.addPerson = function () {
+      const name = document.getElementById("nev").value.trim();
+
+      if (!name) {
+        alert("Adj meg egy nevet.");
+        return;
+      }
+
+      const answers = [];
+      for (let i = 1; i <= 15; i++) {
+        answers.push(document.getElementById("q" + i).value);
+      }
+
+      peopleRef.push({ name, answers })
+        .then(() => {
+          document.getElementById("nev").value = "";
+        })
+        .catch((error) => {
+          alert("Hiba történt mentés közben: " + error.message);
+        });
+    };
+
+    peopleRef.on("value", (snapshot) => {
+      const data = snapshot.val();
+      people = [];
+
+      if (data) {
+        for (const key in data) {
+          people.push(data[key]);
+        }
+      }
+
+      renderList();
     });
+
+    window.matchPeople = function () {
+      const out = document.getElementById("parok");
+      out.innerHTML = "";
+
+      if (people.length < 2) {
+        const li = document.createElement("li");
+        li.textContent = "Legalább 2 ember kell a párosításhoz.";
+        out.appendChild(li);
+        return;
+      }
+
+      const used = new Set();
+      const pairs = [];
+
+      function similarity(a, b) {
+        let score = 0;
+        for (let i = 0; i < a.answers.length; i++) {
+          if (a.answers[i] === b.answers[i]) {
+            score++;
+          }
+        }
+        return score;
+      }
+
+      for (let i = 0; i < people.length; i++) {
+        if (used.has(i)) continue;
+
+        let bestMatch = -1;
+        let bestScore = -1;
+
+        for (let j = i + 1; j < people.length; j++) {
+          if (used.has(j)) continue;
+
+          const score = similarity(people[i], people[j]);
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = j;
+          }
+        }
+
+        if (bestMatch !== -1) {
+          used.add(i);
+          used.add(bestMatch);
+          pairs.push({
+            a: people[i].name,
+            b: people[bestMatch].name,
+            score: bestScore
+          });
+        }
+      }
+
+      if (pairs.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "Nem sikerült párokat találni.";
+        out.appendChild(li);
+        return;
+      }
+
+      pairs.forEach((pair) => {
+        const li = document.createElement("li");
+        li.textContent = `${pair.a} ❤️ ${pair.b} (${pair.score} egyezés)`;
+        out.appendChild(li);
+      });
+    };
+
+    renderQuestions();
   </script>
-</div>
-
-<button onclick="addPerson()">Hozzáadás</button>
-<button onclick="matchPeople()">Párosítás</button>
-
-<h3>Résztvevők:</h3>
-<ul id="lista"></ul>
-
-<h3>Legjobb párok:</h3>
-<ul id="parok"></ul>
-
 </body>
 </html>
