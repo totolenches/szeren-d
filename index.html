@@ -1,229 +1,312 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Szerenád Matchmaker</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Szerenád Matchmaker</title>
 
-<style>
-body {
-  font-family: Arial;
-  background: #2f2f35;
-  color: white;
-  padding: 20px;
-}
-.container {
-  max-width: 800px;
-  margin: auto;
-  background: #444;
-  padding: 20px;
-  border-radius: 10px;
-}
-select, input {
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 6px;
-}
-button {
-  margin: 5px;
-  padding: 10px;
-}
-</style>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBRThDuC3vJyMhHluWcp39anmlgWcMJBy4",
-  authDomain: "szerenad-3e281.firebaseapp.com",
-  databaseURL: "https://szerenad-3e281-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "szerenad-3e281"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const peopleRef = ref(db, "people");
-
-let people = [];
-
-/* 🔥 KÉRDÉSEK SZÖVEGE */
-const questionTexts = [
-  "Halogatni vagy túlleni?",
-  "Ezüst vagy arany?",
-  "iPhone vagy Android?",
-  "Korán vagy későn kelni?",
-  "Introvertált vagy extrovertált vagy?",
-  "Hány shot után kell hazavinni?",
-  "Inkább tervezel vagy improvizálsz?",
-  "Mi a kedvenc évszakod?",
-  "Édes vagy sós?",
-  "Inkább maradsz sokáig vagy hamar lelépsz?",
-  "Inkább mindig késel vagy mindig időben?",
-  "Inkább Magyar zene vagy külföldi?",
-  "Elegáns vagy laza/sportos?",
-  "Hányszor tört el bármit?",
-  "Hány gyereket akarsz?",
-
-  "Melyik volt a kedvenc éved amit együtt töltöttünk?",
-  "Melyik közösségi oldalon töltesz a legtöbb időt?",
-  "Melyik szuperképességet választanád?",
-  "Ha egy hétig csak egy hangot adhatnál ki, melyik lenne?",
-  "Ha időutazhatnál, melyik korszakba mennél?"
-];
-
-/* 🔥 VÁLASZOK */
-const questions = [
-  ["Halogatni", "Túlleni"],
-  ["Ezüst", "Arany"],
-  ["iPhone", "Android"],
-  ["Korán", "Későn"],
-  ["Introvertált", "Extrovertált"],
-  ["0-1", "2-3", "4+"],
-  ["Tervezel", "Improvizálsz"],
-  ["Tél", "Tavasz", "Nyár", "Ősz"],
-  ["Édes", "Sós"],
-  ["Maradok", "Lelépek"],
-  ["Késel", "Időben"],
-  ["Magyar", "Külföldi"],
-  ["Elegáns", "Laza"],
-  ["0", "1-2", "3+"],
-  ["0", "1-2", "3+"],
-
-  ["Nyek", "9.", "10.", "11.", "12.", "13."],
-  ["Instagram", "TikTok", "YouTube", "Facebook", "Egyiken sem"],
-  ["Láthatatlanság", "Repülés", "Gondolatolvasás", "Idő megállítása", "Szupererő"],
-  ["Miau", "Brumm", "Kukurikú", "Bip-bip", "Vau"],
-  ["Őskor", "Ókor", "Középkor", "20. század", "Jövő"]
-];
-
-/* Kérdések kirajzolása */
-function renderQuestions() {
-  const div = document.getElementById("kerdesek");
-  div.innerHTML = "";
-
-  questions.forEach((q, i) => {
-    const label = document.createElement("label");
-    label.textContent = (i+1) + ". " + questionTexts[i];
-
-    const select = document.createElement("select");
-    select.id = "q"+(i+1);
-
-    q.forEach(opt=>{
-      const o = document.createElement("option");
-      o.textContent = opt;
-      select.appendChild(o);
-    });
-
-    div.appendChild(label);
-    div.appendChild(select);
-  });
-}
-
-/* Hozzáadás */
-window.addPerson = function() {
-  const name = document.getElementById("nev").value;
-  if (!name) return alert("Írj nevet");
-
-  let answers = [];
-  for(let i=1;i<=questions.length;i++){
-    answers.push(document.getElementById("q"+i).value);
-  }
-
-  push(peopleRef,{name,answers});
-  document.getElementById("nev").value="";
-}
-
-/* Lista */
-onValue(peopleRef,snapshot=>{
-  const data = snapshot.val();
-  people=[];
-
-  if(data){
-    for(let k in data){
-      people.push({...data[k], id:k});
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #2f2f35;
+      color: white;
+      padding: 20px;
+      margin: 0;
     }
-  }
 
-  renderList();
-});
+    .container {
+      max-width: 850px;
+      margin: auto;
+      background: #444;
+      padding: 24px;
+      border-radius: 12px;
+      box-sizing: border-box;
+    }
 
-function renderList(){
-  const ul = document.getElementById("lista");
-  ul.innerHTML="";
+    h2, h3 {
+      margin-top: 0;
+    }
 
-  people.forEach(p=>{
-    const li=document.createElement("li");
+    label {
+      display: block;
+      margin-top: 12px;
+      margin-bottom: 4px;
+      font-weight: bold;
+    }
 
-    li.textContent=p.name+" ";
+    input, select {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      border: none;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
 
-    const btn=document.createElement("button");
-    btn.textContent="❌";
-    btn.onclick=()=>remove(ref(db,"people/"+p.id));
+    button {
+      margin: 6px 6px 6px 0;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: bold;
+    }
 
-    li.appendChild(btn);
-    ul.appendChild(li);
-  });
-}
+    ul {
+      padding-left: 20px;
+    }
 
-/* Párosítás */
-window.matchPeople=function(){
-  const out=document.getElementById("parok");
-  out.innerHTML="";
+    li {
+      margin-bottom: 8px;
+    }
 
-  let results=[];
+    .delete-btn {
+      margin-left: 10px;
+      padding: 4px 10px;
+      font-size: 13px;
+    }
 
-  for(let i=0;i<people.length;i++){
-    for(let j=i+1;j<people.length;j++){
-      let score=0;
+    .actions {
+      margin-top: 14px;
+      margin-bottom: 20px;
+    }
+  </style>
 
-      for(let k=0;k<people[i].answers.length;k++){
-        if(people[i].answers[k]===people[j].answers[k]) score++;
-      }
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-      results.push({
-        pair: people[i].name+" ❤️ "+people[j].name,
-        score
+    const firebaseConfig = {
+      apiKey: "AIzaSyBRThDuC3vJyMhHluWcp39anmlgWcMJBy4",
+      authDomain: "szerenad-3e281.firebaseapp.com",
+      databaseURL: "https://szerenad-3e281-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "szerenad-3e281"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const peopleRef = ref(db, "people");
+
+    let people = [];
+
+    const questionTexts = [
+      "Halogatni vagy túlleni?",
+      "Ezüst vagy arany?",
+      "iPhone vagy Android?",
+      "Korán vagy későn kelni?",
+      "Introvertált vagy extrovertált vagy?",
+      "Hány shot után kell hazavinni?",
+      "Inkább tervezel vagy improvizálsz?",
+      "Mi a kedvenc évszakod?",
+      "Édes vagy sós?",
+      "Inkább maradsz sokáig vagy hamar lelépsz?",
+      "Inkább mindig késel vagy mindig időben?",
+      "Inkább Magyar zene vagy külföldi?",
+      "Elegáns vagy laza/sportos?",
+      "Hányszor tört el bármit?",
+      "Hány gyereket akarsz?",
+      "Melyik volt a kedvenc éved amit együtt töltöttünk?",
+      "Melyik közösségi oldalon töltesz a legtöbb időt?",
+      "Melyik szuperképességet választanád?",
+      "Ha egy hétig csak egy hangot adhatnál ki, melyik lenne?",
+      "Ha időutazhatnál, melyik korszakba mennél?"
+    ];
+
+    const questions = [
+      ["Halogatni", "Túlleni"],
+      ["Ezüst", "Arany"],
+      ["iPhone", "Android"],
+      ["Korán", "Későn"],
+      ["Introvertált", "Extrovertált"],
+      ["0-1", "2-3", "4+"],
+      ["Tervezel", "Improvizálsz"],
+      ["Tél", "Tavasz", "Nyár", "Ősz"],
+      ["Édes", "Sós"],
+      ["Maradok", "Lelépek"],
+      ["Késel", "Időben"],
+      ["Magyar", "Külföldi"],
+      ["Elegáns", "Laza"],
+      ["0", "1-2", "3+"],
+      ["0", "1-2", "3+"],
+      ["Nyek", "9.", "10.", "11.", "12.", "13."],
+      ["Instagram", "TikTok", "YouTube", "Facebook", "Egyiken sem"],
+      ["Láthatatlanság", "Repülés", "Gondolatolvasás", "Idő megállítása", "Szupererő"],
+      ["Miau", "Brumm", "Kukurikú", "Bip-bip", "Vau!"],
+      ["Őskor", "Ókor", "Középkor", "20. század", "Jövő"]
+    ];
+
+    function renderQuestions() {
+      const div = document.getElementById("kerdesek");
+      div.innerHTML = "";
+
+      questions.forEach((q, i) => {
+        const label = document.createElement("label");
+        label.textContent = `${i + 1}. ${questionTexts[i]}`;
+
+        const select = document.createElement("select");
+        select.id = "q" + (i + 1);
+
+        q.forEach(opt => {
+          const option = document.createElement("option");
+          option.value = opt;
+          option.textContent = opt;
+          select.appendChild(option);
+        });
+
+        div.appendChild(label);
+        div.appendChild(select);
       });
     }
-  }
 
-  results.sort((a,b)=>b.score-a.score);
+    function similarity(personA, personB) {
+      let score = 0;
+      for (let i = 0; i < personA.answers.length; i++) {
+        if (personA.answers[i] === personB.answers[i]) {
+          score++;
+        }
+      }
+      return score;
+    }
 
-  results.slice(0,5).forEach(r=>{
-    const li=document.createElement("li");
-    li.textContent=r.pair+" ("+r.score+")";
-    out.appendChild(li);
-  });
-}
+    function renderList() {
+      const ul = document.getElementById("lista");
+      ul.innerHTML = "";
 
-/* Összes törlés */
-window.clearAll=function(){
-  remove(peopleRef);
-}
+      people.forEach(person => {
+        const li = document.createElement("li");
+        li.textContent = person.name + " ";
 
-renderQuestions();
-</script>
+        const btn = document.createElement("button");
+        btn.textContent = "❌";
+        btn.className = "delete-btn";
+        btn.onclick = () => remove(ref(db, "people/" + person.id));
+
+        li.appendChild(btn);
+        ul.appendChild(li);
+      });
+    }
+
+    window.addPerson = function() {
+      const nameInput = document.getElementById("nev");
+      const name = nameInput.value.trim();
+
+      if (!name) {
+        alert("Írj be egy nevet.");
+        return;
+      }
+
+      const answers = [];
+      for (let i = 1; i <= questions.length; i++) {
+        answers.push(document.getElementById("q" + i).value);
+      }
+
+      push(peopleRef, { name, answers });
+      nameInput.value = "";
+    };
+
+    window.clearAll = function() {
+      if (confirm("Biztos törlöd az összes nevet?")) {
+        remove(peopleRef);
+      }
+    };
+
+    window.matchPeople = function() {
+      const out = document.getElementById("parok");
+      out.innerHTML = "";
+
+      if (people.length < 2) {
+        const li = document.createElement("li");
+        li.textContent = "Legalább 2 ember kell a párosításhoz.";
+        out.appendChild(li);
+        return;
+      }
+
+      let allPairs = [];
+
+      for (let i = 0; i < people.length; i++) {
+        for (let j = i + 1; j < people.length; j++) {
+          allPairs.push({
+            i: i,
+            j: j,
+            name1: people[i].name,
+            name2: people[j].name,
+            score: similarity(people[i], people[j])
+          });
+        }
+      }
+
+      allPairs.sort((a, b) => b.score - a.score);
+
+      const used = new Set();
+      const finalPairs = [];
+
+      allPairs.forEach(pair => {
+        if (!used.has(pair.i) && !used.has(pair.j)) {
+          used.add(pair.i);
+          used.add(pair.j);
+          finalPairs.push(pair);
+        }
+      });
+
+      finalPairs.forEach(pair => {
+        const li = document.createElement("li");
+        li.textContent = `${pair.name1} ❤️ ${pair.name2} (${pair.score} egyezés)`;
+        out.appendChild(li);
+      });
+
+      if (people.length % 2 === 1) {
+        for (let i = 0; i < people.length; i++) {
+          if (!used.has(i)) {
+            const li = document.createElement("li");
+            li.textContent = `${people[i].name} most kimaradt 😄`;
+            out.appendChild(li);
+            break;
+          }
+        }
+      }
+    };
+
+    onValue(peopleRef, (snapshot) => {
+      const data = snapshot.val();
+      people = [];
+
+      if (data) {
+        for (let key in data) {
+          people.push({
+            ...data[key],
+            id: key
+          });
+        }
+      }
+
+      renderList();
+    });
+
+    renderQuestions();
+  </script>
 </head>
-
 <body>
-<div class="container">
-<h2>Szerenád Kérdőív 🍻</h2>
+  <div class="container">
+    <h2>Szerenád Kérdőív 🍻</h2>
 
-<input type="text" id="nev" placeholder="Név">
+    <label for="nev">Név</label>
+    <input type="text" id="nev" placeholder="Név">
 
-<div id="kerdesek"></div>
+    <div id="kerdesek"></div>
 
-<button onclick="addPerson()">Hozzáadás</button>
-<button onclick="matchPeople()">Párosítás</button>
-<button onclick="clearAll()">Összes törlése</button>
+    <div class="actions">
+      <button onclick="addPerson()">Hozzáadás</button>
+      <button onclick="matchPeople()">Párosítás</button>
+      <button onclick="clearAll()">Összes törlése</button>
+    </div>
 
-<h3>Résztvevők:</h3>
-<ul id="lista"></ul>
+    <h3>Résztvevők:</h3>
+    <ul id="lista"></ul>
 
-<h3>Legjobb párok:</h3>
-<ul id="parok"></ul>
-
-</div>
+    <h3>Párok:</h3>
+    <ul id="parok"></ul>
+  </div>
 </body>
 </html>
