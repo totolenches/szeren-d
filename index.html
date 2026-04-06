@@ -20,7 +20,7 @@
       background: #4a4a50;
       padding: 28px;
       border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
     }
 
     h1, h2, h3 {
@@ -40,11 +40,12 @@
 
     input[type="text"], select {
       width: 100%;
-      max-width: 320px;
+      max-width: 360px;
       padding: 8px;
       border-radius: 8px;
       border: none;
       margin-bottom: 6px;
+      box-sizing: border-box;
     }
 
     .buttons {
@@ -71,6 +72,10 @@
       padding-left: 20px;
     }
 
+    li {
+      margin-bottom: 8px;
+    }
+
     .section {
       margin-top: 28px;
     }
@@ -79,6 +84,12 @@
       font-size: 14px;
       opacity: 0.85;
       margin-top: 8px;
+    }
+
+    .delete-btn {
+      margin-left: 10px;
+      padding: 4px 10px;
+      font-size: 14px;
     }
   </style>
 
@@ -98,6 +109,7 @@
       <button onclick="addPerson()">Hozzáadás</button>
       <button onclick="matchPeople()">Párosítás</button>
       <button onclick="clearName()">Név törlése</button>
+      <button onclick="clearAll()">Összes törlése</button>
     </div>
 
     <div class="section">
@@ -140,9 +152,9 @@
       "Inkább tervezel vagy improvizálsz?",
       "Mi a kedvenc évszakod?",
       "Édes vagy sós?",
-      "Inkáb maradsz sokáig vagy hamar lelépsz?",
-      "Inkáb mindig késel vagy mindig időben?",
-      "Inkáb Magyar zene vagy külföldi?",
+      "Inkább maradsz sokáig vagy hamar lelépsz?",
+      "Inkább mindig késel vagy mindig időben?",
+      "Inkább Magyar zene vagy külföldi?",
       "Elegáns vagy laza/sportos?",
       "Hányszor tört el bármit?",
       "Hány gyereket akarsz?"
@@ -196,9 +208,31 @@
 
       people.forEach((p) => {
         const li = document.createElement("li");
-        li.textContent = p.name;
+
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = p.name;
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "❌";
+        deleteBtn.className = "delete-btn";
+        deleteBtn.onclick = function () {
+          deletePerson(p.id, p.name);
+        };
+
+        li.appendChild(nameSpan);
+        li.appendChild(deleteBtn);
         list.appendChild(li);
       });
+    }
+
+    function similarity(a, b) {
+      let score = 0;
+      for (let i = 0; i < a.answers.length; i++) {
+        if (a.answers[i] === b.answers[i]) {
+          score++;
+        }
+      }
+      return score;
     }
 
     window.clearName = function () {
@@ -227,13 +261,35 @@
         });
     };
 
+    window.deletePerson = function (id, name) {
+      if (confirm(`${name} törlése?`)) {
+        peopleRef.child(id).remove()
+          .catch((error) => {
+            alert("Hiba történt törlés közben: " + error.message);
+          });
+      }
+    };
+
+    window.clearAll = function () {
+      if (confirm("Biztos törlöd az összes embert?")) {
+        peopleRef.remove()
+          .catch((error) => {
+            alert("Hiba történt törlés közben: " + error.message);
+          });
+      }
+    };
+
     peopleRef.on("value", (snapshot) => {
       const data = snapshot.val();
       people = [];
 
       if (data) {
         for (const key in data) {
-          people.push(data[key]);
+          people.push({
+            id: key,
+            name: data[key].name,
+            answers: data[key].answers
+          });
         }
       }
 
@@ -253,16 +309,6 @@
 
       const used = new Set();
       const pairs = [];
-
-      function similarity(a, b) {
-        let score = 0;
-        for (let i = 0; i < a.answers.length; i++) {
-          if (a.answers[i] === b.answers[i]) {
-            score++;
-          }
-        }
-        return score;
-      }
 
       for (let i = 0; i < people.length; i++) {
         if (used.has(i)) continue;
